@@ -1,4 +1,12 @@
-/vendor
-/.idea
-/.vscode
-/.vagrant
+# Vendor (e.g. Composer)
+vendor
+node_modules
+
+# Dist
+builds
+
+# Visual Studio
+.vscode
+
+# macOS
+.DS_Store

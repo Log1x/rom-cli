@@ -1,18 +1,18 @@
 {
-    "name": "laravel-zero/laravel-zero",
-    "description": "The Laravel Zero Framework.",
-    "keywords": ["framework", "laravel", "laravel zero", "console", "cli"],
-    "homepage": "https://laravel-zero.com",
+    "name": "log1x/rom-cli",
+    "description": "Simple CLI tool to get Ragnarok Mobile exchange prices from ROM Exchange.",
+    "keywords": ["cli", "console", "ragnarok", "rom"],
+    "homepage": "https://github.com/log1x/rom-cli",
     "type": "project",
     "license": "MIT",
     "support": {
-        "issues": "https://github.com/laravel-zero/laravel-zero/issues",
-        "source": "https://github.com/laravel-zero/laravel-zero"
+        "issues": "https://github.com/log1x/rom-cli/issues",
+        "source": "https://github.com/log1x/rom-cli"
     },
     "authors": [
         {
-            "name": "Nuno Maduro",
-            "email": "enunomaduro@gmail.com"
+            "name": "Brandon Nifong",
+            "email": "brandon@tendency.me"
         }
     ],
     "require": {
@@ -39,11 +39,6 @@
         "preferred-install": "dist",
         "sort-packages": true,
         "optimize-autoloader": true
-    },
-    "scripts": {
-        "post-create-project-cmd": [
-            "@php application app:rename"
-        ]
     },
     "minimum-stability": "dev",
     "prefer-stable": true,

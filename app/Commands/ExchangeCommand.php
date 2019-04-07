@@ -5,6 +5,10 @@ namespace App\Commands;
 use Illuminate\Console\Scheduling\Schedule;
 use LaravelZero\Framework\Commands\Command;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Psr7\Request;
+use Psr\Http\Message\ResponseInterface;
+
 
 class ExchangeCommand extends Command
 {
@@ -13,8 +17,7 @@ class ExchangeCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'exchange
-                           {name : The name of the item (required)}';
+    protected $signature = 'search {name* : The name of the item (required)}';
 
     /**
      * The description of the command.
@@ -31,41 +34,110 @@ class ExchangeCommand extends Command
     protected $api = 'https://www.romexchange.com/api';
 
     /**
+     * Headers
+     *
+     * @var array
+     */
+    protected $headers = ['Name', 'Price', 'Changes'];
+
+    /**
      * Execute the console command.
      *
      * @return mixed
      */
     public function handle()
     {
-        $request = (new Client())->request('GET', $this->api, [
-            'query' => [
-                'item' => $this->argument('name'),
-                'slim' => 'true',
-                'exact' => 'false'
-            ]
-        ])->getBody();
+        $response = $this->client()
+            ->getAsync($this->api)
+            ->then(
+                function (ResponseInterface $response) {
+                    return collect(json_decode($response->getBody()->getContents()))->filter();
+                },
 
-        $response = collect(json_decode($request))->filter();
+                function (RequestException $error) {
+                    return collect();
+                }
+            )
+            ->wait();
 
         if ($response->isEmpty()) {
-            return $this->error('No item found.');
+            return $this->error('Error: No item found.');
         }
 
         $items = $response->map(function ($item) {
-            return [$item->name, number_format($item->global->latest, 0) . 'z'];
+            return [
+                $item->name,
+                $this->price($item->global->latest),
+                $this->progress($item->global->week->change)
+            ];
         });
 
-        $this->table(['Name', 'Price'], $items);
+        $this->table($this->headers, $items);
     }
 
     /**
-     * Define the command's schedule.
+     * Client
      *
-     * @param  \Illuminate\Console\Scheduling\Schedule $schedule
-     * @return void
+     * @return GuzzleHttp\Guzzle\Client
      */
-    public function schedule(Schedule $schedule): void
+    public function client()
     {
-        // $schedule->command(static::class)->everyMinute();
+        return new Client([
+            'query' => [
+                'item'  => implode('%23', $this->argument('name')),
+                'exact' => 'false'
+            ]
+        ]);
+    }
+
+    /**
+     * Returns an ASCI Progress Bar based on the value.
+     *
+     * @param  integer $value
+     * @param  integer $max
+     * @param  integer $bar
+     * @return string
+     */
+    public function progress($value = null, $max = 10, $bar = '▊')
+    {
+        if (empty($value)) {
+            return '<fg=black>' . str_repeat($bar, $max) . '</> <fg=yellow>N/A</>';
+        }
+
+        $percent = ceil(abs($value / 100) * 5);
+        $progress = str_repeat($bar, $percent);
+
+        if ($value < 0) {
+            return sprintf(
+                '<fg=black>%s</><fg=red>%s</><fg=black>%s</> <fg=red>%s%%</>',
+                str_repeat($bar, ($max / 2) - $percent),
+                $progress,
+                str_repeat($bar, $max / 2),
+                $value
+            );
+        }
+
+        return sprintf(
+            '<fg=black>%s</><fg=green>%s</><fg=black>%s</> <fg=green>+%s%%</>',
+            str_repeat($bar, $max / 2),
+            $progress,
+            str_repeat($bar, ($max / 2) - $percent),
+            $value
+        );
+    }
+
+    /**
+     * Returns a formatted price.
+     *
+     * @param  integer $value
+     * @return string
+     */
+    public function price($value)
+    {
+        if ($value <= 0) {
+            return '<fg=yellow>N/A</>';
+        }
+
+        return number_format($value, 0) . 'z';
     }
 }
