@@ -91,7 +91,7 @@ class ExchangeCommand extends Command
     }
 
     /**
-     * Returns an ASCI Progress Bar based on the value.
+     * Returns a mirrored Progress Bar based on the value.
      *
      * @param  integer $value
      * @param  integer $max
@@ -101,7 +101,10 @@ class ExchangeCommand extends Command
     public function progress($value = null, $max = 10, $bar = '▊')
     {
         if (empty($value)) {
-            return '<fg=black>' . str_repeat($bar, $max) . '</> <fg=yellow>N/A</>';
+            return sprintf(
+                '<fg=black>%s</> <fg=yellow>N/A</>',
+                str_repeat($bar, $max)
+            );
         }
 
         $percent = ceil(abs($value / 100) * 5);
