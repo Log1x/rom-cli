@@ -9,7 +9,6 @@ use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Psr7\Request;
 use Psr\Http\Message\ResponseInterface;
 
-
 class ExchangeCommand extends Command
 {
     /**
@@ -38,7 +37,42 @@ class ExchangeCommand extends Command
      *
      * @var array
      */
-    protected $headers = ['Name', 'Price', 'Changes'];
+    protected $headers = ['Region', 'Name', 'Type', 'Price', 'Changes'];
+
+    /**
+     * Items
+     *
+     * @var array
+     */
+    protected $items = [
+        '1'  => 'Weapon',
+        '2'  => 'Off-hand',
+        '3'  => 'Armor',
+        '4'  => 'Garment',
+        '5'  => 'Footgear',
+        '6'  => 'Accessory',
+        '7'  => 'Blueprint',
+        '8'  => 'Potion / Effect',
+        '9'  => 'Refine',
+        '10' => 'Scroll / Album',
+        '11' => 'Material',
+        '12' => 'Holiday Material',
+        '13' => 'Pet Material',
+        '14' => 'Premium',
+        '15' => 'Costume',
+        '16' => 'Head',
+        '17' => 'Face',
+        '18' => 'Back',
+        '19' => 'Mouth',
+        '20' => 'Tail',
+        '21' => 'Weapon Card',
+        '22' => 'Off-hand Card',
+        '23' => 'Armor Card',
+        '24' => 'Garment Card',
+        '25' => 'Shoe Card',
+        '26' => 'Accessory Card',
+        '27' => 'Headwear Card'
+    ];
 
     /**
      * Execute the console command.
@@ -64,11 +98,16 @@ class ExchangeCommand extends Command
             return $this->error('Error: No item found.');
         }
 
-        $items = $response->map(function ($item) {
+        $items = $response->map(function ($item) use ($response) {
             return [
-                $item->name,
-                $this->price($item->global->latest),
-                $this->progress($item->global->week->change)
+                "<fg=blue>Global</>\n" .
+                "<fg=yellow>SEA</>" . ($item->name !== $response->last()->name ? "\n" : ''),
+                $this->highlight($this->name(), $item->name),
+                $this->type($item->type),
+                "<fg=blue>{$this->price($item->global->latest)}</>" . "\n" .
+                "<fg=yellow>{$this->price($item->sea->latest)}</>",
+                $this->progress($item->global->week->change) . "\n" .
+                $this->progress($item->sea->week->change)
             ];
         });
 
@@ -84,7 +123,7 @@ class ExchangeCommand extends Command
     {
         return new Client([
             'query' => [
-                'item'  => implode('%23', $this->argument('name')),
+                'item'  => $this->name(),
                 'exact' => 'false'
             ]
         ]);
@@ -98,16 +137,16 @@ class ExchangeCommand extends Command
      * @param  integer $bar
      * @return string
      */
-    public function progress($value = null, $max = 10, $bar = '▊')
+    public function progress($value = null, $max = 10, $bar = '█')
     {
         if (empty($value)) {
             return sprintf(
-                '<fg=black>%s</> <fg=yellow>N/A</>',
+                '<fg=black>%s</> <fg=red>N/A</>',
                 str_repeat($bar, $max)
             );
         }
 
-        $percent = ceil(abs($value / 100) * 5);
+        $percent = ceil(abs($value / 100) * $max / 2);
         $progress = str_repeat($bar, $percent);
 
         if ($value < 0) {
@@ -130,6 +169,40 @@ class ExchangeCommand extends Command
     }
 
     /**
+     * Returns a highlighted word from a string.
+     *
+     * @param  string $value
+     * @return string
+     */
+    public function highlight($word, $string)
+    {
+        $highlight = substr($string, stripos($string, $word), strlen($word));
+
+        return str_ireplace($word, "<fg=blue>{$highlight}</>", $string);
+    }
+
+    /**
+     * Returns the name seperated by an HTML encoded space.
+     *
+     * @return string
+     */
+    public function name()
+    {
+        return implode('%23', $this->argument('name'));
+    }
+
+    /**
+     * Returns an item type.
+     *
+     * @param  integer $type
+     * @return string
+     */
+    public function type($type)
+    {
+        return $this->items[$type];
+    }
+
+    /**
      * Returns a formatted price.
      *
      * @param  integer $value
@@ -138,7 +211,7 @@ class ExchangeCommand extends Command
     public function price($value)
     {
         if ($value <= 0) {
-            return '<fg=yellow>N/A</>';
+            return '<fg=red>N/A</>';
         }
 
         return number_format($value, 0) . 'z';
